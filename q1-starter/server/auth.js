@@ -85,7 +85,7 @@ export function verifyAccessToken(token, secret) {
 
   // Pin the algorithm. NEVER trust the header's own claim about how it was signed —
   // this is where "alg: none" and algorithm-substitution attacks are stopped.
-  if (header.alg !== ALG || header.typ !== 'JWT') {
+  if (!header || typeof header !== 'object' || Array.isArray(header) || header.alg !== ALG || header.typ !== 'JWT') {
     throw unauthenticated('unsupported token algorithm');
   }
 
@@ -102,10 +102,19 @@ export function verifyAccessToken(token, secret) {
     throw unauthenticated('malformed token payload');
   }
 
+  if (!claims || typeof claims !== 'object' || Array.isArray(claims)) {
+    throw unauthenticated('malformed token payload');
+  }
+
   const now = Math.floor(Date.now() / 1000);
   if (typeof claims.exp !== 'number' || claims.exp <= now) throw unauthenticated('token expired');
   if (claims.iss !== ISS || claims.aud !== AUD) throw unauthenticated('bad token issuer or audience');
-  if (!claims.jti) throw unauthenticated('token has no jti');
+  if (typeof claims.sub !== 'string' || !claims.sub) throw unauthenticated('token has no sub');
+  if (typeof claims.org !== 'string' || !claims.org) throw unauthenticated('token has no org');
+  if (typeof claims.role !== 'string' || !claims.role) throw unauthenticated('token has no role');
+  if (typeof claims.pv !== 'number') throw unauthenticated('token has no pv');
+  if (typeof claims.iat !== 'number') throw unauthenticated('token has no iat');
+  if (typeof claims.jti !== 'string' || !claims.jti) throw unauthenticated('token has no jti');
 
   return claims;
 }
