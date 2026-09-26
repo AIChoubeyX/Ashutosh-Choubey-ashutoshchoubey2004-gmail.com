@@ -46,3 +46,83 @@ Per AUTH-DATA-MODEL.md §10 and §2:
 ### What would change my mind
 
 If asymmetric token signing (e.g., RS256/EdDSA) is required in a multi-service federated architecture with separate identity providers, algorithm pinning would need to support specified public key schemes, but for RemoteOps' single-service HMAC design, pinning strictly to HS256 is the safest and most minimal architecture.
+
+---
+
+---
+
+
+
+```markdown
+## 2026-09-26 — Phase 2: Validated caller context and permission resolution
+
+### Decision
+
+Validate the existing `server/context.js` and `server/permissions.js` implementation against the Phase 2 requirements rather than rewriting working authorization logic.
+
+### Context
+
+The starter repository already contained the caller-context and permission-resolution implementation.
+
+The Phase 2 work therefore focused on validating the existing implementation against:
+
+- `AUTH-DATA-MODEL.md`
+- `PERMISSIONS.md`
+
+### Caller context
+
+Validated:
+
+- Composite `(user_id, org_id)` membership lookup.
+- Organization isolation.
+- Cross-organization route rejection.
+- Soft-deleted organization handling.
+- Missing and removed membership handling.
+- Exact `perm_version` validation.
+- Suspended membership behavior.
+- No user-only authorization caching.
+
+### Permission resolution
+
+Validated:
+
+- Dynamic permission catalogue loading.
+- Database-backed role baselines.
+- Wildcard permissions.
+- Half-open grant time windows.
+- Explicit DENY precedence.
+- Implicit DENY behavior.
+- Permission provenance.
+- Device-scoped permission evaluation.
+- Organization-level permission resolution.
+- Batched device resolution.
+- Compound session-mode authorization.
+- Privilege/permission laundering prevention.
+
+### Important authorization rule
+
+Explicit DENY always overrides ALLOW regardless of scope or specificity.
+
+For example:
+
+```text
+Organization-wide DENY
++
+Device-specific ALLOW
+=
+DENY
+### Rejected alternative
+
+Rewriting the existing authorization engine without a demonstrated specification gap was rejected because authorization code is security-sensitive and unnecessary changes could introduce incorrect scope handling, privilege escalation, or cross-organization access.
+
+### Verification
+
+```text
+node scripts/check-permissions.js
+35 passed, 0 failed
+
+node scripts/check-api.js
+66 passed, 0 failed
+
+node scripts/check-jwt.js
+43 passed, 0 failed

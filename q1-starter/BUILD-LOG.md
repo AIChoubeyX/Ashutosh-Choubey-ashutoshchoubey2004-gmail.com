@@ -73,3 +73,58 @@
   - Result: ALL PASS — 43 passed, 0 failed.
 - Ran `node scripts/check-permissions.js` (ALL PASS — 35 passed, 0 failed).
 - Ran `node scripts/check-api.js` (ALL PASS — 66 passed, 0 failed).
+## 2026-09-26 — Phase 2: Validated caller context and permission resolution engine
+
+### Baseline
+
+- Reviewed the requirements for authenticated caller context and authorization resolution against `AUTH-DATA-MODEL.md §1-§4` and `PERMISSIONS.md §1-§10`.
+- Inspected the existing implementations in:
+  - `server/context.js`
+  - `server/permissions.js`
+- No source-code changes were made to these files during this phase.
+- The purpose of this phase was to validate that the existing implementation satisfies the Phase 2 authorization requirements and public checks.
+
+### Caller context validation
+
+- Validated the existing implementation in `server/context.js`.
+- Caller identity is bound to `(user_id, org_id)`.
+- Membership lookup strictly uses both the authenticated user and organization.
+- Cross-organization access is rejected with the required 404 isolation behavior.
+- Soft-deleted organizations are rejected.
+- Missing and removed memberships are rejected.
+- Active memberships require an exact `perm_version` match through `assertFresh()`.
+- Suspended memberships bypass the stale-token check so permission resolution can return the required suspended/forbidden result.
+- No user-only authorization cache is used.
+
+### Permission resolution validation
+
+- Validated the existing implementation in `server/permissions.js`.
+- Permission catalogue and role baselines are loaded dynamically from the database.
+- Wildcards are supported, including:
+  - `*`
+  - `device:*`
+  - `session:*`
+  - `grant:*`
+  - `user:*`
+  - `audit:*`
+  - `org:*`
+- Grant time windows use:
+  `starts_at <= now < expires_at`.
+- Explicit DENY always overrides ALLOW, including device-scoped ALLOW versus organization-wide DENY.
+- Unmatched permissions resolve to implicit DENY.
+- Permission provenance records effect, source, and reason.
+- Device-scoped permissions are evaluated with device context.
+- Organization-level permission resolution is used where device context is not required.
+- `resolveDevices()` performs batched permission evaluation.
+- Session start validates both `session:start` and the requested mode permission:
+  - `device:view`
+  - `device:control`
+  - `device:terminal`
+- `assertMayGrant()` prevents privilege/permission laundering.
+
+### Verification
+
+Ran:
+
+```text
+node scripts/check-permissions.js
