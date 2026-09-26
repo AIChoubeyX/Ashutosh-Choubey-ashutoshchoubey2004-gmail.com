@@ -91,7 +91,7 @@ export default function People({ session, reload }) {
                       {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                     </select>
                   ) : (
-                    <span data-testid="role-label" data-permission="user:role:update">{m.role}</span>
+                    <span data-testid="role-label">{m.role}</span>
                   )}
                 </td>
                 <td><span className={`pill ${m.status === 'active' ? 'online' : ''}`}>{m.status}</span></td>

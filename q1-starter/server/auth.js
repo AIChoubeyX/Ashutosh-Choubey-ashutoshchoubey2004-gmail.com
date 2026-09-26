@@ -18,6 +18,15 @@ export const REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60;
 const b64 = (buf) => Buffer.from(buf).toString('base64url');
 const unb64 = (str) => Buffer.from(str, 'base64url');
 
+function decodeSegment(segment) {
+  if (typeof segment !== 'string' || !/^[A-Za-z0-9_-]*$/.test(segment) || segment.length % 4 === 1) {
+    throw new Error('invalid base64url');
+  }
+  const decoded = unb64(segment);
+  if (b64(decoded) !== segment) throw new Error('invalid base64url');
+  return decoded;
+}
+
 export function signToken(claims, secret) {
   const header = { alg: ALG, typ: 'JWT' };
   const h = b64(JSON.stringify(header));
@@ -78,7 +87,7 @@ export function verifyAccessToken(token, secret) {
 
   let header;
   try {
-    header = JSON.parse(unb64(h).toString('utf8'));
+    header = JSON.parse(decodeSegment(h).toString('utf8'));
   } catch {
     throw unauthenticated('malformed token header');
   }
@@ -90,14 +99,19 @@ export function verifyAccessToken(token, secret) {
   }
 
   const expected = createHmac('sha256', secret).update(`${h}.${p}`).digest();
-  const actual = unb64(s);
+  let actual;
+  try {
+    actual = decodeSegment(s);
+  } catch {
+    throw unauthenticated('bad signature');
+  }
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
     throw unauthenticated('bad signature');
   }
 
   let claims;
   try {
-    claims = JSON.parse(unb64(p).toString('utf8'));
+    claims = JSON.parse(decodeSegment(p).toString('utf8'));
   } catch {
     throw unauthenticated('malformed token payload');
   }
@@ -107,13 +121,13 @@ export function verifyAccessToken(token, secret) {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  if (typeof claims.exp !== 'number' || claims.exp <= now) throw unauthenticated('token expired');
+  if (typeof claims.exp !== 'number' || !Number.isFinite(claims.exp) || claims.exp <= now) throw unauthenticated('token expired');
   if (claims.iss !== ISS || claims.aud !== AUD) throw unauthenticated('bad token issuer or audience');
   if (typeof claims.sub !== 'string' || !claims.sub) throw unauthenticated('token has no sub');
   if (typeof claims.org !== 'string' || !claims.org) throw unauthenticated('token has no org');
   if (typeof claims.role !== 'string' || !claims.role) throw unauthenticated('token has no role');
-  if (typeof claims.pv !== 'number') throw unauthenticated('token has no pv');
-  if (typeof claims.iat !== 'number') throw unauthenticated('token has no iat');
+  if (typeof claims.pv !== 'number' || !Number.isFinite(claims.pv)) throw unauthenticated('token has no pv');
+  if (typeof claims.iat !== 'number' || !Number.isFinite(claims.iat)) throw unauthenticated('token has no iat');
   if (typeof claims.jti !== 'string' || !claims.jti) throw unauthenticated('token has no jti');
 
   return claims;

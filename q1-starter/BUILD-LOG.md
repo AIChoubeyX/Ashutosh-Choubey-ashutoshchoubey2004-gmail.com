@@ -1,3 +1,33 @@
+## 2026-09-26 - Final implementation review and focused hardening
+
+### Phase 3: Organizations, members, invites, devices, and grants
+
+- Reviewed the existing route implementations and left the validated organization, membership, invite, device, and grant behavior unchanged.
+- Confirmed the routes use the database-backed permission engine, hashed invite tokens, transactional acceptance, isolation checks, last-owner protection, device filtering, wildcard grants, and grant time windows.
+
+### Phase 4: Sessions
+
+- Reviewed the existing session implementation and left the validated record-only session behavior unchanged.
+- Confirmed compound session authorization, TTL expiry, grandfathered authority snapshots, exclusive control/terminal sessions, non-exclusive view sessions, and cascade termination for suspension/removal/device tenancy events.
+
+### Phase 5: Audit
+
+- Reviewed the append-only audit helper and mutation-route audit coverage. Existing success and denial records remain unchanged; secrets are not included in audit payloads.
+
+### Phase 6: Web console
+
+- Fixed `web/components/People.jsx` so a user without `user:role:update` receives only a plain role label. The fallback no longer advertises a permission-controlled element with `data-permission`.
+- Preserved server-provided permission state as the sole source for rendered controls.
+
+### Phase 7: Security hardening
+
+- Hardened `server/auth.js` JWT segment decoding to reject malformed or non-canonical base64url input.
+- Required finite numeric `exp`, `pv`, and `iat` claims so `NaN` cannot bypass validation.
+
+### Phase 8: Final verification
+
+- Editor diagnostics report no errors in the two changed source files.
+- Runtime checks (`check-jwt.js`, `check-permissions.js`, `check-api.js`, `npm run build`, and Playwright) could not be executed in this environment because `node`, `npm`, and `npx` are not installed or available on `PATH`.
 # Build Log
 
 ## 2026-09-26 — Local setup and Windows database-loader compatibility

@@ -1,3 +1,24 @@
+## 2026-09-26 - Preserve validated domain implementation and make two focused fixes
+
+### Decision
+
+Keep the existing Phase 3-6 server and console implementation, applying only the concrete UI presence and JWT parsing fixes found during final review.
+
+### Context
+
+The repository already contained database-backed organization, membership, invite, device, grant, session, audit, and permission behavior. Rewriting those paths without executable checks would create unnecessary regression risk.
+
+### Chosen approach
+
+Use the existing permission engine and server responses unchanged. Remove `data-permission` from the unauthorized People role-label fallback, and make JWT base64url decoding strict while requiring finite numeric claims.
+
+### Rejected alternative
+
+Do not add a frontend role-to-permission matrix or rewrite working route handlers merely to produce broader code churn.
+
+### Verification
+
+`get_errors` reports no errors for `web/components/People.jsx` and `server/auth.js`. Node-based suites and the build were unavailable because the runtime is absent from the environment.
 # Decisions
 
 ## Decision: Use fileURLToPath for database fixture paths on Windows
